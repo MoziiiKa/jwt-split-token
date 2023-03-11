@@ -1,0 +1,6 @@
+{
+    "connection_string": "root:rootjwt-app123@tcp(localhost:3306)/jwt-app?parseTime=true",
+    "port": ":8590",
+    "token_max_age": 10,
+    "token_signing_key": "p3s6v9y$B&E(H+MbQeThWmZq4t7w!z%C"
+}

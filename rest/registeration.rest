@@ -1,0 +1,12 @@
+// Register User
+POST http://localhost:8585/api/v1/user-management/registration HTTP/1.1
+content-type: application/json
+    
+{
+    "name": "hasan",
+    "username": "hasan",
+    "email": "hasan@hasan.com",
+    "password": "789"
+}
+
+###
