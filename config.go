@@ -1,30 +1,10 @@
 package main
 
-import (
-	"log"
+import "os"
 
-	"github.com/spf13/viper"
-)
-
-type Config struct {
-	Port             string `mapstructure:"port"`
-	ConnectionString string `mapstructure:"connection_string"`
-	TokenMaxAge      string `mapstructure:"token_max_age"`
-}
-
-var AppConfig *Config
-
-func LoadAppConfig() {
-	log.Println("Loading Server Configurations...")
-	viper.AddConfigPath(".")
-	viper.SetConfigName("config")
-	viper.SetConfigType("json")
-	err := viper.ReadInConfig()
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = viper.Unmarshal(&AppConfig)
-	if err != nil {
-		log.Fatal(err)
-	}
+// getting config from environment
+func SetENVs() (connectionString string, port string) {
+	connectionString = os.Getenv("CONNECTION_STRING")
+	port = os.Getenv("PORT")
+	return connectionString, port
 }

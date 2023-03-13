@@ -1,6 +1,7 @@
+// Generate JWT
+
 @host = localhost:8090
 
-// Generate JWT
 POST http://{{host}}/api/v1/token-management/token HTTP/1.1
 content-type: application/json
     

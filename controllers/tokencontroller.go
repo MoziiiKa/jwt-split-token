@@ -4,6 +4,8 @@ import (
 	"jwt-split-token/auth"
 	"jwt-split-token/database"
 	"jwt-split-token/models"
+	"os"
+	"strconv"
 
 	"net/http"
 
@@ -41,8 +43,22 @@ func GenerateToken(context *gin.Context) {
 		return
 	}
 
+	accessTokenMaxAgeStr := os.Getenv("ACCESS_TOKEN_MAX_AGE")
+
+	// convert to int
+	accessTokenMaxAge, err := strconv.Atoi(accessTokenMaxAgeStr)
+	if err != nil {
+		panic(err)
+	}
+
+	jwtKeyStr := os.Getenv("JWT_KEY")
+	jwtKey := []byte(jwtKeyStr)
+
+	// print only for debuging
+	// fmt.Println("jwtKey: ", jwtKey)
+
 	// getting JWT token from jwt.go
-	tokenSign, err := auth.GenerateJWT(user.Password, user.Username)
+	tokenSign, err := auth.GenerateJWT(user.Password, user.Username, accessTokenMaxAge, jwtKey)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		context.Abort()

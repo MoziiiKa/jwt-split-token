@@ -9,10 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 )
-
-var jwtKey = []byte("p3s6v9y$B&E(H+MbQeThWmZq4t7w!z%C")
 
 type JWTClaim struct {
 	Username string `json:"username"`
@@ -20,11 +18,11 @@ type JWTClaim struct {
 	jwt.StandardClaims
 }
 
-// it is called when user login
-func GenerateJWT(password string, username string) (tokenSign string, err error) {
+// generate a jwt token when user login
+func GenerateJWT(password string, username string, accessTokenMaxAge int, jwtKey []byte) (tokenSign string, err error) {
 
 	issueTime := time.Now()
-	expirationTime := time.Now().Add(30 * time.Minute)
+	expirationTime := time.Now().Add(time.Duration(accessTokenMaxAge) * time.Minute)
 
 	// payload
 	claims := &JWTClaim{
@@ -33,40 +31,36 @@ func GenerateJWT(password string, username string) (tokenSign string, err error)
 		StandardClaims: jwt.StandardClaims{
 			IssuedAt:  issueTime.Unix(),
 			ExpiresAt: expirationTime.Unix(),
-			Issuer:    "test",
+			Issuer:    "http://example.com",
 		},
 	}
-	fmt.Println("\nclaims: ", claims)
 
 	// header + payload
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	fmt.Println("\ntoken: ", token)
 
-	// header + payload + signature
-	// convert "header + payload" to string
+	// header + payload + signature - convert "header + payload" to string
 	headerPayloadString, err := token.SignedString(jwtKey)
 	if err != nil {
 		panic(err)
 	}
 
+	// signing with "jwtKey"
 	tokenString, err := token.SignedString(jwtKey)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("\ntokenString: ", tokenString)
+	fmt.Println("\ntokenString: ", tokenString) // print just for demonstration!
 
 	// extract "signature"
 	tokenSign = strings.Split(tokenString, ".")[2]
-	fmt.Println("\ntokenSign: ", tokenSign)
 
 	// hashed "signature"
 	hashedTokenSign := sha256.Sum256([]byte(tokenSign))
-	fmt.Println("\nhashedTokenSign: ", hashedTokenSign)
 
-	// store "header + payload" in a cache with key "hashedTokenSign"
-	// create new redis client
-	redisClient := database.NewRedisClient("localhost:6379", "", 0)
+	// store "header + payload" in redis with key "hashedTokenSign"
+	redisClient := database.NewRedisClient("redis:6379", "", 0)
 	ctx := context.Background()
+
 	// convert hashedTokenSign to string
 	hashedTokenSignString := string(hashedTokenSign[:])
 
@@ -74,13 +68,12 @@ func GenerateJWT(password string, username string) (tokenSign string, err error)
 	if err != nil {
 		panic(err)
 	}
-	// send "signature" (to user)
 
 	return tokenSign, err
 }
 
-// it is called when user sends an access request to time.ir
-func ValidateToken(signedToken string) (jwtToken string, err error) {
+// verify jwt token when users send request to time.ir
+func ValidateToken(signedToken string, jwtKey []byte) (jwtToken string, err error) {
 
 	// check if token is not empty
 	if signedToken == "" {
@@ -89,26 +82,25 @@ func ValidateToken(signedToken string) (jwtToken string, err error) {
 	}
 
 	// check if token is complete and not just a signature
-	// if it has dots, it means that it is complete
 	if strings.Contains(signedToken, ".") {
 		err = errors.New("token is complete")
 		return
 	}
 
-	// check if token is valid & calculate hash of token
+	// calculate hash of token
 	hashedTokenSign := sha256.Sum256([]byte(signedToken))
 
 	// convert hashedTokenSign to string
 	hashedTokenSignString := string(hashedTokenSign[:])
 
 	// create new redis client
-	redisClient := database.NewRedisClient("localhost:6379", "", 0)
+	redisClient := database.NewRedisClient("redis:6379", "", 0)
 
 	ctx := context.Background()
 	// get header + payload from redis
 	headerPayloadString, err := redisClient.Get(ctx, hashedTokenSignString).Result()
 	if err != nil {
-		// if there is no such key in redis, it means that token is invalid
+		// checking if token is valid
 		err = errors.New("token is invalid")
 		return
 	}
@@ -122,24 +114,29 @@ func ValidateToken(signedToken string) (jwtToken string, err error) {
 		},
 	)
 	if err != nil {
-		// if there is an error, it means that token is invalid
 		err = errors.New("token is invalid")
 		return
 	}
 
-	// check if token is expired
 	claims, ok := token.Claims.(*JWTClaim)
 	if !ok {
 		err = errors.New("couldn't parse claims")
 		return
 	}
 
+	// check if token is expired
 	if claims.ExpiresAt < time.Now().Local().Unix() {
 		err = errors.New("token expired")
 		return
 	}
 
-	// return jwt token from header + payload + signature
+	// check if token issuer is valid
+	if claims.Issuer != "http://example.com" {
+		err = errors.New("invalid issuer")
+		return
+	}
+
+	// return jwt token from "header + payload + signature"
 	jwtToken = headerPayloadString + "." + signedToken
 
 	return jwtToken, nil

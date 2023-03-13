@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"jwt-split-token/auth"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,15 +19,18 @@ func Auth() gin.HandlerFunc {
 			return
 		}
 
+		jwtKeyStr := os.Getenv("JWT_KEY")
+		jwtKey := []byte(jwtKeyStr)
+
 		// validating the token
-		tokenString, err := auth.ValidateToken(tokenString)
+		tokenString, err := auth.ValidateToken(tokenString, jwtKey)
 		if err != nil {
 			context.JSON(403, gin.H{"error": err.Error()})
 			context.Abort()
 			return
 		}
 
-		// set token in context
+		// set token
 		context.Set("token", tokenString)
 		context.Next()
 	}

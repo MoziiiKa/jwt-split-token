@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"jwt-split-token/controllers"
 	"jwt-split-token/database"
 	"jwt-split-token/middlewares"
@@ -11,24 +10,17 @@ import (
 
 func main() {
 
-	// Load Configurations from config.json using Viper
-	LoadAppConfig()
-
-	fmt.Println("TokenMaxAge: ", AppConfig.TokenMaxAge)
-
-	// Initialize Database
-	database.Connect(AppConfig.ConnectionString)
+	// initialize Database
+	connectionString, port := SetENVs()
+	database.Connect(connectionString)
 	database.Migrate()
-	// Initialize Router
-	router := initRouter()
-	err := router.Run(AppConfig.Port)
-	if err != nil {
-		return
-	}
 
+	// initialize router
+	router := routerInit()
+	router.Run(port)
 }
 
-func initRouter() *gin.Engine {
+func routerInit() *gin.Engine {
 	router := gin.Default()
 	api := router.Group("/api/v1")
 	{

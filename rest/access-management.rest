@@ -1,8 +1,9 @@
+// Access a Secured API Endpoint
+
 @host = localhost:8090
 
-// Access a Secured API Endpoint
 GET http://{{host}}/api/v1/access-management/time-ir HTTP/1.1
 content-type: application/text
-authorization: 4T7ODljfAUgi7_NQMij4VvCr4FpNszg7I3WOLDTMyHQ
+authorization: b9u_Sj2bHXLbVx1EVS0gjw8oEVp9OR-uNRmV6DW6d0U
 
 ###
